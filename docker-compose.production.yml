@@ -14,7 +14,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init-complete.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/backups/backup_20260603_103400.sql.txt:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./database/backups:/backups:ro
     networks:
       - chatflow-network
