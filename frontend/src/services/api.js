@@ -1,8 +1,8 @@
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const API_BASE_URL = 'http://localhost:8090/api';
-const WEBSOCKET_URL = 'http://localhost:8090';
+const API_BASE_URL = 'http://51.79.188.203:8090/api';
+const WEBSOCKET_URL = 'http://51.79.188.203:8090';
 
 // WebSocket client
 export const socket = io(WEBSOCKET_URL, {

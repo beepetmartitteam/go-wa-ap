@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../services/api';
 
 // Direct API configuration
-const API_BASE_URL = 'http://localhost:8090/api';
+const API_BASE_URL = 'http://51.79.188.203:8090/api/';
 
 const AuthContext = createContext();
 
