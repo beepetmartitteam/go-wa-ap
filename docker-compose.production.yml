@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: chatflow-postgres
@@ -24,13 +23,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Redis for caching and queue
   redis:
     image: redis:7-alpine
     container_name: chatflow-redis
@@ -46,13 +39,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Evolution API Instance 1
   chatflow-api-1:
     image: aldinokemal2104/go-whatsapp-web-multidevice
     container_name: chatflow-api-1
@@ -74,13 +61,7 @@ services:
         condition: service_healthy
     networks:
       - chatflow-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Evolution API Instance 2
   chatflow-api-2:
     image: aldinokemal2104/go-whatsapp-web-multidevice
     container_name: chatflow-api-2
@@ -102,37 +83,7 @@ services:
         condition: service_healthy
     networks:
       - chatflow-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Nginx Load Balancer
-  nginx:
-    image: nginx:alpine
-    container_name: chatflow-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - chatflow-api-1
-      - chatflow-api-2
-      - backend-api
-      - frontend
-    networks:
-      - chatflow-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Backend API Service
   backend-api:
     build:
       context: ./backend
@@ -171,17 +122,17 @@ services:
     networks:
       - chatflow-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8090/health', r => process.exit(r.statusCode===200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8090/health', r => process.exit(r.statusCode===200 ? 0 : 1)).on('error', () => process.exit(1))"
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
-  # Frontend Dashboard
   frontend:
     build:
       context: ./frontend
@@ -197,26 +148,16 @@ services:
       - backend-api
     networks:
       - chatflow-network
-    healthcheck:
-      test: ["CMD", "node", "-e", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+
+    # Disable healthcheck sementara
+    # karena image React biasanya tidak punya curl/wget
+    # dan node command belum tentu tersedia setelah build
 
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   chatflow_data_1:
-    driver: local
   chatflow_data_2:
-    driver: local
 
 networks:
   chatflow-network:
