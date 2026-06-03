@@ -1,0 +1,223 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: chatflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chatflow_api
+      POSTGRES_USER: chatflow_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init-complete.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./database/backups:/backups:ro
+    networks:
+      - chatflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatflow_user -d chatflow_api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis for caching and queue
+  redis:
+    image: redis:7-alpine
+    container_name: chatflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chatflow-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Evolution API Instance 1
+  chatflow-api-1:
+    image: aldinokemal2104/go-whatsapp-web-multidevice
+    container_name: chatflow-api-1
+    restart: unless-stopped
+    ports:
+      - "8081:3000"
+    environment:
+      - WEBHOOK_URL=${SERVER_URL}/webhook/incoming
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - WEBHOOK_EVENTS=message,message.ack
+      - AUTO_MARK_READ=true
+      - DEBUG=false
+    volumes:
+      - chatflow_data_1:/app/storages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Evolution API Instance 2
+  chatflow-api-2:
+    image: aldinokemal2104/go-whatsapp-web-multidevice
+    container_name: chatflow-api-2
+    restart: unless-stopped
+    ports:
+      - "8082:3000"
+    environment:
+      - WEBHOOK_URL=${SERVER_URL}/webhook/incoming
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - WEBHOOK_EVENTS=message,message.ack
+      - AUTO_MARK_READ=true
+      - DEBUG=false
+    volumes:
+      - chatflow_data_2:/app/storages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: chatflow-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - chatflow-api-1
+      - chatflow-api-2
+      - backend-api
+      - frontend
+    networks:
+      - chatflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backend API Service
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chatflow-backend
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=chatflow_api
+      - DB_USER=chatflow_user
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - CHATFLOW_API_KEY=${CHATFLOW_API_KEY}
+      - CHATFLOW_API_URL=http://chatflow-api-2:3000
+      - SERVER_URL=${SERVER_URL}
+      - CHATFLOW_INSTANCE_1=http://chatflow-api-1:3000
+      - CHATFLOW_INSTANCE_2=http://chatflow-api-2:3000
+      - PORT=8090
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: chatflow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=${SERVER_URL}/api
+      - REACT_APP_WS_URL=${WS_SERVER_URL}
+    depends_on:
+      - backend-api
+    networks:
+      - chatflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chatflow_data_1:
+    driver: local
+  chatflow_data_2:
+    driver: local
+
+networks:
+  chatflow-network:
+    driver: bridge
