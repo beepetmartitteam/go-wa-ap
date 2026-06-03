@@ -94,7 +94,7 @@ app.use('/webhook', require('./routes/publicWebhook'));
 // WebSocket for real-time updates
 const io = require('socket.io')(server, {
   cors: {
-    origin: ["http://localhost:3002", "http://localhost:3000", "http://127.0.0.1:3002", "http://127.0.0.1:3000"],
+    origin: ["http://localhost:3002", "http://localhost:3000", "http://127.0.0.1:3002", "http://127.0.0.1:3000","http://51.79.188.203:3001"],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["*"]
