@@ -6,12 +6,12 @@
 if [ $# -eq 0 ]; then
     echo "Usage: $0 backup_file.sql.gz"
     echo "Available backups:"
-    ls -la /Users/nswardana/nodejs/SMS\ API/go-wa-api/database/backups/
+    ls -la backups/
     exit 1
 fi
 
 BACKUP_FILE="$1"
-BACKUP_DIR="/Users/nswardana/nodejs/SMS API/go-wa-api/database/backups"
+BACKUP_DIR="/backups"
 FULL_PATH="$BACKUP_DIR/$BACKUP_FILE"
 
 if [ ! -f "$FULL_PATH" ]; then

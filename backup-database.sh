@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-BACKUP_DIR="/opt/go-wa-api/database/backups"
+BACKUP_DIR="database/backups"
 CONTAINER_NAME="chatflow-postgres"
 DB_NAME="chatflow_api"
 DB_USER="chatflow_user"
