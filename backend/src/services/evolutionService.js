@@ -50,10 +50,14 @@ class EvolutionService {
   }
 
   // Create new instance in ChatFlow
-  async createInstance(phoneData) {
+  async createInstance(phoneData, evolutionInstance = 'chatflow-1')
+  {
     try {
+
+      const instanceConfig =this.getInstanceConfig(evolutionInstance);
+
       // Based on go-whatsapp-web-multidevice documentation, use POST /devices endpoint
-      const response = await axios.post(`${this.evolutionApiUrl}/devices`, {
+      const response = await axios.post(`${instanceConfig.url}/devices`, {
         device_id: phoneData.deviceName,
         number: phoneData.phoneNumber,
         webhook: `${process.env.SERVER_URL}/webhook/evolution`,
@@ -111,7 +115,7 @@ class EvolutionService {
       logger.info('Found phone:', { phoneId: phone.id, deviceName: phone.device_name, isConnected: phone.is_connected });
 
       // Check if ChatFlow is available
-      const evolutionInstance = phone.evolution_name || 'chatflow-1';
+      const evolutionInstance = phone.evolution_instance || 'chatflow-1';
       const instanceConfig = this.getInstanceConfig(evolutionInstance);
       
       try {
@@ -146,12 +150,24 @@ class EvolutionService {
           });
 
           // Create device first
+          /*
           const createResult = await this.createInstance({
             deviceName: phone.device_name,
             phoneNumber: phone.phone_number,
             webhookUrl: phone.webhook_url,
             webhookSecret: phone.webhook_secret
           });
+          */
+         const createResult = await this.createInstance(
+          {
+            deviceName: phone.device_name,
+            phoneNumber: phone.phone_number,
+            webhookUrl: phone.webhook_url,
+            webhookSecret: phone.webhook_secret
+          },
+          evolutionInstance
+        );
+
 
           if (createResult.success) {
             logger.info('Device created successfully, retrying QR generation');
