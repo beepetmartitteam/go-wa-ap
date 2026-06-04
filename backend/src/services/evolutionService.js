@@ -8,32 +8,39 @@ const { db } = require('../config/database');
 
 class EvolutionService {
   constructor() {
-    // Check if running in development mode
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    
-    // Evolution Service API Key for service-to-service authentication
-    this.evolutionServiceApiKey = process.env.EVOLUTION_SERVICE_API_KEY;
-    
-    // Multiple ChatFlow instances
-    this.instances = {
-      'chatflow-1': {
-        url: isDevelopment ? 'http://localhost:8081' : 'http://chatflow-1:3000',
-        apiKey: this.evolutionServiceApiKey
-      },
-      'chatflow-2': {
-        url: isDevelopment ? 'http://localhost:8082' : 'http://chatflow-2:3000',
-        apiKey: this.evolutionServiceApiKey
-      }
-    };
-    
-    // Default instance
-    this.evolutionApiUrl = isDevelopment ? 'http://localhost:8081' : process.env.EVOLUTION_API_URL || 'http://chatflow-1:3000';
-    this.evolutionApiKey = this.evolutionServiceApiKey;
-    
-    // For frontend access, use localhost:8081 in development
-    this.evolutionApiPublicUrl = isDevelopment ? 'http://localhost:8081' : 'http://localhost:8081';
-  }
+      const isDevelopment =
+        process.env.NODE_ENV === 'development';
 
+      this.evolutionServiceApiKey =
+        process.env.EVOLUTION_SERVICE_API_KEY ||
+        process.env.CHATFLOW_API_KEY;
+
+      this.instances = {
+        'chatflow-1': {
+          url: process.env.CHATFLOW_INSTANCE_1,
+          apiKey: this.evolutionServiceApiKey
+        },
+        'chatflow-2': {
+          url: process.env.CHATFLOW_INSTANCE_2,
+          apiKey: this.evolutionServiceApiKey
+        }
+      };
+
+      this.evolutionApiUrl = isDevelopment
+        ? 'http://localhost:8081'
+        : (
+            process.env.EVOLUTION_API_URL ||
+            process.env.CHATFLOW_API_URL ||
+            process.env.CHATFLOW_INSTANCE_1
+          );
+
+      this.evolutionApiKey =
+        this.evolutionServiceApiKey;
+
+      this.evolutionApiPublicUrl = isDevelopment
+        ? 'http://localhost:8081'
+        : process.env.SERVER_URL;
+    }
   // Get instance URL and API key
   getInstanceConfig(instanceName) {
     return this.instances[instanceName] || {
@@ -49,7 +56,7 @@ class EvolutionService {
       const response = await axios.post(`${this.evolutionApiUrl}/devices`, {
         device_id: phoneData.deviceName,
         number: phoneData.phoneNumber,
-        webhook: `http://localhost:8090/webhook/evolution`,
+        webhook: `${process.env.SERVER_URL}/webhook/evolution`,
         webhook_secret: phoneData.webhookSecret
       }, {
         headers: {
