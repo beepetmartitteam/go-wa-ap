@@ -5,9 +5,9 @@ const logger = require('../utils/logger');
 
 const authMiddleware = async (req, res, next) => {
   try {
-    // Get token from header
+    // Get token from Authorization header
     const authHeader = req.header('Authorization');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         error: 'Access denied',
@@ -15,11 +15,12 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7);
 
-    // Check if token is blacklisted
+    // Check blacklist (optional)
     try {
       const isBlacklisted = await redis.exists(`blacklist:${token}`);
+
       if (isBlacklisted) {
         return res.status(401).json({
           error: 'Token has been revoked',
@@ -28,71 +29,77 @@ const authMiddleware = async (req, res, next) => {
       }
     } catch (redisError) {
       logger.warn('Redis blacklist check failed:', redisError);
-      // Continue without Redis blacklist check
     }
 
-    // Verify token structure
-    const decoded = jwt.decode(token);
-    if (!decoded || !decoded.id) {
+    // Decode without verification to get user id
+    const decodedToken = jwt.decode(token);
+
+    if (!decodedToken || !decodedToken.id) {
       return res.status(401).json({
         error: 'Invalid token',
         message: 'Token structure is invalid'
       });
     }
 
-    // Get user from cache or database
-    let user;
-    try {
-      user = await redis.get(`session:${decoded.id}`);
-      
-      if (!user) {
-        // If not in cache, get from database
-        user = await User.findById(decoded.id);
-        if (!user) {
+    // ALWAYS load fresh user from database
+    const user = await User.findById(decodedToken.id);
+
+    if (!user) {
+      return res.status(401).json({
+        error: 'User not found',
+        message: 'Invalid token'
+      });
+    }
+
+    if (!user.jwt_secret) {
+      logger.error('User JWT secret is missing', {
+        userId: user.id
+      });
+
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'User secret not configured'
+      });
+    }
+
+    logger.debug('JWT verification', {
+      userId: user.id,
+      username: user.username,
+      hasJwtSecret: !!user.jwt_secret
+    });
+
+    // Verify token using user's secret
+    jwt.verify(
+      token,
+      user.jwt_secret,
+      {
+        issuer: 'chatflow',
+        audience: 'evolution-client'
+      },
+      (err, decoded) => {
+        if (err) {
+          logger.warn('Token verification failed:', {
+            userId: user.id,
+            error: err.message,
+            name: err.name
+          });
+
           return res.status(401).json({
-            error: 'User not found',
-            message: 'Invalid token'
+            error: 'Token is not valid',
+            message: err.message
           });
         }
 
-        // Cache user session
-        try {
-          await redis.set(`session:${decoded.id}`, user, 3600); // 1 hour
-        } catch (redisError) {
-          logger.warn('Redis session caching failed:', redisError);
-          // Continue without Redis caching
-        }
-      }
-    } catch (redisError) {
-      logger.warn('Redis session check failed, using database:', redisError);
-      // Fallback to database only
-      user = await User.findById(decoded.id);
-      if (!user) {
-        return res.status(401).json({
-          error: 'User not found',
-          message: 'Invalid token'
-        });
-      }
-    }
+        req.user = decoded;
+        req.userDetails = user;
 
-    // Verify token
-    jwt.verify(token, user.jwt_secret || process.env.JWT_SECRET, (err, decoded) => {
-      if (err) {
-        logger.warn('Token verification failed:', err);
-        return res.status(401).json({
-          error: 'Token is not valid',
-          message: 'Authentication failed'
-        });
+        next();
       }
-
-      req.user = decoded;
-      req.userDetails = user;
-      next();
-    });
-
+    );
   } catch (error) {
     logger.error('Auth middleware error:', error);
-    res.status(500).json({
+
+    return res.status(500).json({
       error: 'Internal server error',
       message: 'Authentication failed'
     });
@@ -103,7 +110,7 @@ const authMiddleware = async (req, res, next) => {
 const apiKeyAuth = async (req, res, next) => {
   try {
     const apiKey = req.header('X-API-Key');
-    
+
     if (!apiKey) {
       return res.status(401).json({
         error: 'Access denied',
@@ -111,8 +118,8 @@ const apiKeyAuth = async (req, res, next) => {
       });
     }
 
-    // Find user by API key
     const user = await User.findByApiKey(apiKey);
+
     if (!user) {
       return res.status(401).json({
         error: 'Invalid API key',
@@ -125,12 +132,14 @@ const apiKeyAuth = async (req, res, next) => {
       username: user.username,
       email: user.email
     };
-    req.userDetails = user;
-    next();
 
+    req.userDetails = user;
+
+    next();
   } catch (error) {
     logger.error('API Key auth error:', error);
-    res.status(500).json({
+
+    return res.status(500).json({
       error: 'Internal server error',
       message: 'Authentication failed'
     });
@@ -143,9 +152,16 @@ const phoneOwnership = async (req, res, next) => {
     const userId = req.user.id;
     const phoneId = req.params.phoneId;
 
-    // Check if phone belongs to user
-    const query = 'SELECT id FROM phone_numbers WHERE id = $1 AND user_id = $2';
-    const phone = await require('../config/database').db.getOne(query, [phoneId, userId]);
+    const query = `
+      SELECT id
+      FROM phone_numbers
+      WHERE id = $1
+      AND user_id = $2
+    `;
+
+    const { db } = require('../config/database');
+
+    const phone = await db.getOne(query, [phoneId, userId]);
 
     if (!phone) {
       return res.status(403).json({
@@ -157,7 +173,8 @@ const phoneOwnership = async (req, res, next) => {
     next();
   } catch (error) {
     logger.error('Phone ownership error:', error);
-    res.status(500).json({
+
+    return res.status(500).json({
       error: 'Internal server error'
     });
   }
@@ -165,7 +182,7 @@ const phoneOwnership = async (req, res, next) => {
 
 module.exports = {
   auth: authMiddleware,
-  authenticateToken: authMiddleware, // Alias for consistency
+  authenticateToken: authMiddleware,
   apiKey: apiKeyAuth,
   phoneOwnership
 };
