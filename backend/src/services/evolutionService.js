@@ -18,13 +18,17 @@ class EvolutionService {
       this.instances = {
         'chatflow-1': {
           url: process.env.CHATFLOW_INSTANCE_1,
+          publicUrl: process.env.CHATFLOW_PUBLIC_1,
           apiKey: this.evolutionServiceApiKey
         },
+
         'chatflow-2': {
           url: process.env.CHATFLOW_INSTANCE_2,
+          publicUrl: process.env.CHATFLOW_PUBLIC_2,
           apiKey: this.evolutionServiceApiKey
         }
       };
+
 
       this.evolutionApiUrl = isDevelopment
         ? 'http://localhost:8081'
@@ -186,7 +190,7 @@ class EvolutionService {
           
           // Update database status to connected
           await db.query(
-            'UPDATE phone_numbers SET is_connected = true, qr_code = NULL, updated_at = NOW() WHERE id = $1',
+            'UPDATE phone_numbers SET is_connected = true, updated_at = NOW() WHERE id = $1',
             [phoneId]
           );
           
@@ -221,14 +225,14 @@ class EvolutionService {
           if (qrCodePath) {
             // Handle both relative and absolute URLs
             let fullQrUrl;
+            const publicBaseUrl =instanceConfig.publicUrl || instanceConfig.url;
+
             if (qrCodePath.startsWith('http')) {
-              // Absolute URL
               fullQrUrl = qrCodePath;
             } else {
-              // Relative path - prepend instance URL
-              fullQrUrl = `${instanceConfig.url}${qrCodePath}`;
+              fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
             }
-            
+
             // Update phone with QR code URL
             const updateQuery = 'UPDATE phone_numbers SET qr_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
             await db.query(updateQuery, [fullQrUrl, phoneId]);

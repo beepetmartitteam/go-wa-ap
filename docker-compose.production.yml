@@ -112,6 +112,9 @@ services:
       - RATE_LIMIT_MAX_REQUESTS=100
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
       - ALLOWED_ORIGINS=http://51.79.188.203:3001,http://localhost:3000
+      - CHATFLOW_PUBLIC_1=http://51.79.188.203:8081
+      - CHATFLOW_PUBLIC_2=http://51.79.188.203:8082
+
       
     volumes:
       - ./backend/uploads:/app/uploads
