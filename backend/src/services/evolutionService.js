@@ -45,13 +45,14 @@ class EvolutionService {
         ? 'http://localhost:8081'
         : process.env.SERVER_URL;
     }
-  // Get instance URL and API key
-  getInstanceConfig(instanceName) {
-    return this.instances[instanceName] || {
-      url: this.evolutionApiUrl,
-      apiKey: this.evolutionApiKey
-    };
-  }
+ // Get instance URL and API key
+getInstanceConfig(instanceName) {
+  return this.instances[instanceName] || {
+    url: this.evolutionApiUrl,
+    publicUrl: this.evolutionApiPublicUrl,
+    apiKey: this.evolutionApiKey
+  };
+}
 
   // Create new instance in ChatFlow
   async createInstance(phoneData, evolutionInstance = 'chatflow-1')
