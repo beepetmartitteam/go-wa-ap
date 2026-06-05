@@ -210,52 +210,54 @@ getInstanceConfig(instanceName) {
 
         // Check if QR code is available
         if (loginResponse.data && loginResponse.data.code === 'SUCCESS') {
-          const qrData = loginResponse.data.results;
-          
-          // Check for QR code in multiple possible fields
-          let qrCodePath = null;
-          
-          if (qrData && qrData.qrcode) {
-            qrCodePath = qrData.qrcode;
-          } else if (qrData && qrData.qr_link) {
-            qrCodePath = qrData.qr_link;
-          } else if (qrData && qrData.qr_code) {
-            qrCodePath = qrData.qr_code;
+         const qrData = loginResponse.data.results;
+        // Check for QR code in multiple possible fields
+        let qrCodePath = null;
+
+        if (qrData?.qrcode) {
+          qrCodePath = qrData.qrcode;
+        } else if (qrData?.qr_link) {
+          qrCodePath = qrData.qr_link;
+        } else if (qrData?.qr_code) {
+          qrCodePath = qrData.qr_code;
+        }
+
+        if (qrCodePath) {
+          let fullQrUrl;
+          const publicBaseUrl = instanceConfig.publicUrl || instanceConfig.url;
+
+          if (qrCodePath.startsWith('http')) {
+            const urlObj = new URL(qrCodePath);
+
+            fullQrUrl = `${publicBaseUrl}${urlObj.pathname}`;
+          } else {
+            fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
           }
-          
-          if (qrCodePath) {
-            // Handle both relative and absolute URLs
-            let fullQrUrl;
-            const publicBaseUrl =instanceConfig.publicUrl
 
-            if (qrCodePath.startsWith('http')) {
-              fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
-            } else {
-              fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
-            }
+          logger.info('QR URL GENERATED', {
+            qrCodePath,
+            publicBaseUrl,
+            fullQrUrl
+          });
 
-            // Update phone with QR code URL
-            const updateQuery = 'UPDATE phone_numbers SET qr_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2';
-            await db.query(updateQuery, [fullQrUrl, phoneId]);
+          // Update phone with QR code URL
+          await db.query(
+            'UPDATE phone_numbers SET qr_code = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            [fullQrUrl, phoneId]
+          );
 
-            logger.info('QR code generated successfully:', {
-              phoneId,
-              deviceName: phone.device_name,
-              qrCodePath,
-              fullQrUrl
-            });
-
-            return {
-              success: true,
-              qrCode: fullQrUrl,
-              qrCodeBase64: qrData.qrcode_base64 || null,
-              message: 'QR code generated successfully',
-              phoneId: phoneId,
-              deviceName: phone.device_name,
-              phoneNumber: phone.phone_number,
-              evolutionApiUrl: instanceConfig.url,
-              source: 'chatflow'
-            };
+          return {
+            success: true,
+            qrCode: fullQrUrl,
+            qrCodeBase64: qrData.qrcode_base64 || null,
+            message: 'QR code generated successfully',
+            phoneId,
+            deviceName: phone.device_name,
+            phoneNumber: phone.phone_number,
+            evolutionApiUrl: instanceConfig.url,
+            source: 'chatflow'
+          };
+        
           } else {
             // No QR code found - device might be connected
             return {
