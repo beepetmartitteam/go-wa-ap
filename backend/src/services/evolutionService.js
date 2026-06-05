@@ -226,10 +226,10 @@ getInstanceConfig(instanceName) {
           if (qrCodePath) {
             // Handle both relative and absolute URLs
             let fullQrUrl;
-            const publicBaseUrl =instanceConfig.publicUrl || instanceConfig.url;
+            const publicBaseUrl =instanceConfig.publicUrl
 
             if (qrCodePath.startsWith('http')) {
-              fullQrUrl = qrCodePath;
+              fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
             } else {
               fullQrUrl = `${publicBaseUrl}${qrCodePath}`;
             }
