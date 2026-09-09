@@ -27,7 +27,7 @@ const sendWhatsAppMessage = async (recipient, message, senderPhone) => {
       }, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + Buffer.from('admin:admin').toString('base64'),
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64'),
           'X-Device-Id': phoneQuery.device_name // Use actual device name from database
         },
         timeout: 5000 // 5 second timeout

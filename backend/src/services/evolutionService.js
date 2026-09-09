@@ -70,7 +70,7 @@ getInstanceConfig(instanceName) {
       }, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`
+          'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`
         },
         timeout: 30000
       });
@@ -136,7 +136,7 @@ getInstanceConfig(instanceName) {
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`,
+              'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`,
               'X-Device-Id': phone.device_name
             },
             timeout: 15000
@@ -478,7 +478,7 @@ getInstanceConfig(instanceName) {
           {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`
+              'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`
             },
             timeout: 15000
           }
@@ -553,7 +553,7 @@ getInstanceConfig(instanceName) {
       const response = await axios.get(`${instanceConfig.url}/app/status`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`,
+          'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`,
           'X-Device-Id': phone.device_name
         },
         timeout: 10000
@@ -617,7 +617,7 @@ getInstanceConfig(instanceName) {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`,
+            'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`,
             'X-Device-Id': phone.device_name
           },
           timeout: 30000
@@ -773,7 +773,7 @@ getInstanceConfig(instanceName) {
       await axios.get(`${instanceConfig.url}/app/logout`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`,
+          'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`,
           'X-Device-Id': phone.device_name
         },
         timeout: 15000
@@ -820,7 +820,7 @@ getInstanceConfig(instanceName) {
       await axios.delete(`${instanceConfig.url}/devices/${phone.device_name}`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`,
+          'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`,
           'X-Device-Id': phone.device_name
         },
         timeout: 15000
@@ -851,7 +851,7 @@ getInstanceConfig(instanceName) {
       const response = await axios.get(`${this.evolutionApiUrl}/devices`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from('admin:admin').toString('base64')}`
+          'Authorization': `Basic ${Buffer.from(`${process.env.GOWA_BASIC_AUTH_USER}:${process.env.GOWA_BASIC_AUTH_PASSWORD}`).toString('base64')}`
         },
         timeout: 10000
       });

@@ -78,6 +78,8 @@ services:
       - --auto-mark-read=true
       - --debug=false
       - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
 
     ports:
       - "8081:3000"
@@ -110,6 +112,8 @@ services:
       - --webhook-events=message,message.ack
       - --auto-mark-read=true
       - --debug=false
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
       - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
 
     ports:
