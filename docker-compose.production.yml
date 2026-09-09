@@ -77,6 +77,7 @@ services:
       - --webhook-events=message,message.ack
       - --auto-mark-read=true
       - --debug=false
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
 
     ports:
       - "8081:3000"
@@ -109,6 +110,7 @@ services:
       - --webhook-events=message,message.ack
       - --auto-mark-read=true
       - --debug=false
+      - --basic-auth=${GOWA_BASIC_AUTH_USER}:${GOWA_BASIC_AUTH_PASSWORD}
 
     ports:
       - "8082:3000"
@@ -163,6 +165,10 @@ services:
       CHATFLOW_API_URL: http://chatflow-api-2:3000
       CHATFLOW_INSTANCE_1: http://chatflow-api-1:3000
       CHATFLOW_INSTANCE_2: http://chatflow-api-2:3000
+
+      # GOWA BASIC AUTH
+      GOWA_BASIC_AUTH_USER: ${GOWA_BASIC_AUTH_USER}
+      GOWA_BASIC_AUTH_PASSWORD: ${GOWA_BASIC_AUTH_PASSWORD}
 
       # PUBLIC SERVER
       SERVER_URL: ${SERVER_URL}
