@@ -1,199 +1,131 @@
 version: '3.8'
 
 services:
-
-  # =========================================================
-  # POSTGRESQL
-  # =========================================================
   postgres:
     image: postgres:15-alpine
     container_name: chatflow-postgres
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: chatflow_api
       POSTGRES_USER: chatflow_user
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-      # DATABASE BACKUP / INITIAL DATABASE
       - ./database/backups/backup_20260603_103400.sql.txt:/docker-entrypoint-initdb.d/01-init.sql:ro
-
-      # BACKUP DIRECTORY
       - ./database/backups:/backups:ro
-
     networks:
       - chatflow-network
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U chatflow_user -d chatflow_api"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-
-  # =========================================================
-  # REDIS
-  # =========================================================
   redis:
     image: redis:7-alpine
     container_name: chatflow-redis
     restart: unless-stopped
-
     ports:
       - "6379:6379"
-
     volumes:
       - redis_data:/data
-
     networks:
       - chatflow-network
-
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-
-  # =========================================================
-  # GOWA - WHATSAPP INSTANCE 1
-  # =========================================================
   chatflow-api-1:
     image: aldinokemal2104/go-whatsapp-web-multidevice
     container_name: chatflow-api-1
     restart: unless-stopped
-
-    command:
-      - rest
-      - --webhook=http://chatflow-backend:8090/webhook/incoming
-      - --webhook-secret=${WEBHOOK_SECRET}
-      - --webhook-events=message,message.ack
-      - --auto-mark-read=true
-      - --debug=false
-
     ports:
       - "8081:3000"
-
+    environment:
+      - WEBHOOK_URL=${SERVER_URL}/webhook/incoming
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - WEBHOOK_EVENTS=message,message.ack
+      - AUTO_MARK_READ=true
+      - DEBUG=false
     volumes:
       - chatflow_data_1:/app/storages
-
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     networks:
       - chatflow-network
 
-
-  # =========================================================
-  # GOWA - WHATSAPP INSTANCE 2
-  # =========================================================
   chatflow-api-2:
     image: aldinokemal2104/go-whatsapp-web-multidevice
     container_name: chatflow-api-2
     restart: unless-stopped
-
-    command:
-      - rest
-      - --webhook=http://chatflow-backend:8090/webhook/incoming
-      - --webhook-secret=${WEBHOOK_SECRET}
-      - --webhook-events=message,message.ack
-      - --auto-mark-read=true
-      - --debug=false
-
     ports:
       - "8082:3000"
-
+    environment:
+      - WEBHOOK_URL=${SERVER_URL}/webhook/incoming
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - WEBHOOK_EVENTS=message,message.ack
+      - AUTO_MARK_READ=true
+      - DEBUG=false
     volumes:
       - chatflow_data_2:/app/storages
-
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     networks:
       - chatflow-network
 
-
-  # =========================================================
-  # CHATFLOW BACKEND
-  # =========================================================
   backend-api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-
     container_name: chatflow-backend
     restart: unless-stopped
-
     ports:
       - "8090:8090"
-
     environment:
-      NODE_ENV: production
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=chatflow_api
+      - DB_USER=chatflow_user
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - CHATFLOW_API_KEY=${CHATFLOW_API_KEY}
+      - CHATFLOW_API_URL=http://chatflow-api-2:3000
+      - SERVER_URL=${SERVER_URL}
+      - CHATFLOW_INSTANCE_1=http://chatflow-api-1:3000
+      - CHATFLOW_INSTANCE_2=http://chatflow-api-2:3000
+      - PORT=8090
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - ALLOWED_ORIGINS=http://51.79.188.203:3001,http://localhost:3000
+      - CHATFLOW_PUBLIC_1=http://51.79.188.203:8081
+      - CHATFLOW_PUBLIC_2=http://51.79.188.203:8082
 
-      # DATABASE
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: chatflow_api
-      DB_USER: chatflow_user
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-
-      # REDIS
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-
-      # SECURITY
-      JWT_SECRET: ${JWT_SECRET}
-      CHATFLOW_API_KEY: ${CHATFLOW_API_KEY}
-      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
-
-      # CHATFLOW / GOWA
-      CHATFLOW_API_URL: http://chatflow-api-2:3000
-      CHATFLOW_INSTANCE_1: http://chatflow-api-1:3000
-      CHATFLOW_INSTANCE_2: http://chatflow-api-2:3000
-
-      # PUBLIC SERVER
-      SERVER_URL: ${SERVER_URL}
-
-      # SERVER
-      PORT: 8090
-
-      # RATE LIMIT
-      RATE_LIMIT_WINDOW_MS: 900000
-      RATE_LIMIT_MAX_REQUESTS: 100
-
-      # CORS
-      ALLOWED_ORIGINS: http://51.79.188.203:3001,http://localhost:3000
-
-      # PUBLIC GOWA ENDPOINTS
-      CHATFLOW_PUBLIC_1: http://51.79.188.203:8081
-      CHATFLOW_PUBLIC_2: http://51.79.188.203:8082
-
+      
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/logs:/app/logs
-
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     networks:
       - chatflow-network
-
     healthcheck:
       test:
         [
@@ -206,48 +138,32 @@ services:
       timeout: 10s
       retries: 3
 
-
-  # =========================================================
-  # CHATFLOW FRONTEND
-  # =========================================================
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-
     container_name: chatflow-frontend
     restart: unless-stopped
-
     ports:
       - "3001:3000"
-
     environment:
-      REACT_APP_API_URL: http://51.79.188.203:8090/api
-      REACT_APP_WS_URL: ws://51.79.188.203:8090/ws
-
+      - REACT_APP_API_URL=http://51.79.188.203:8090/api
+      - REACT_APP_WS_URL=wss://51.79.188.203:8090/ws
     depends_on:
       - backend-api
-
     networks:
       - chatflow-network
 
-    # Healthcheck sengaja tidak digunakan.
-    # Image React belum tentu memiliki curl/wget.
+    # Disable healthcheck sementara
+    # karena image React biasanya tidak punya curl/wget
+    # dan node command belum tentu tersedia setelah build
 
-
-# =========================================================
-# VOLUMES
-# =========================================================
 volumes:
   postgres_data:
   redis_data:
   chatflow_data_1:
   chatflow_data_2:
 
-
-# =========================================================
-# NETWORK
-# =========================================================
 networks:
   chatflow-network:
     driver: bridge
